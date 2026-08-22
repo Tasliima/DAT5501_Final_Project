@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from scipy.stats import pearsonr
 import statsmodels.api as sm
 
-from data_processing import (
+from src.data_processing import (
     load_working_hours,
     load_productivity,
     merge_datasets,
