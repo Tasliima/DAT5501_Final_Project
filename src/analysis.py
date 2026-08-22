@@ -144,6 +144,93 @@ def create_recent_country_plot(df):
     plt.savefig("figures/country_average_2000_2019.png", dpi=300)
     plt.close()
 
+def create_trend_plot(df):
+    """Plot average working hours and productivity over time since 2000."""
+    recent = df[df["year"] >= 2000].copy()
+
+    yearly = (
+        recent.groupby("year")
+        .agg(
+            average_working_hours=("annual_working_hours", "mean"),
+            average_productivity=("productivity_per_hour", "mean"),
+        )
+        .reset_index()
+    )
+
+    fig, ax1 = plt.subplots(figsize=(10, 6))
+
+    ax1.plot(
+        yearly["year"],
+        yearly["average_working_hours"],
+        marker="o",
+    )
+    ax1.set_xlabel("Year")
+    ax1.set_ylabel("Average annual working hours")
+
+    ax2 = ax1.twinx()
+    ax2.plot(
+        yearly["year"],
+        yearly["average_productivity"],
+        marker="s",
+        linestyle="--",
+    )
+    ax2.set_ylabel("Average productivity per hour")
+
+    plt.title("Working Hours and Labour Productivity Trends, 2000-2019")
+
+    fig.tight_layout()
+    plt.savefig(
+        "figures/working_hours_productivity_trend.png",
+        dpi=300,
+    )
+    plt.close()
+
+
+def calculate_country_changes(df):
+    """Calculate changes in working hours and productivity by country."""
+    recent = df[df["year"].between(2000, 2019)].copy()
+
+    changes = []
+
+    for country, group in recent.groupby("country"):
+        group = group.sort_values("year")
+
+        if len(group) < 2:
+            continue
+
+        first = group.iloc[0]
+        last = group.iloc[-1]
+
+        changes.append(
+            {
+                "country": country,
+                "hours_change":
+                    last["annual_working_hours"]
+                    - first["annual_working_hours"],
+                "productivity_change":
+                    last["productivity_per_hour"]
+                    - first["productivity_per_hour"],
+            }
+        )
+
+    changes_df = pd.DataFrame(changes)
+
+    correlation, p_value = pearsonr(
+        changes_df["hours_change"],
+        changes_df["productivity_change"],
+    )
+
+    print("\n--- Country change analysis ---")
+    print(f"Countries analysed: {len(changes_df)}")
+    print(f"Correlation between changes: {correlation:.3f}")
+    print(f"P-value: {p_value:.5f}")
+
+    changes_df.to_csv(
+        "data/country_changes_2000_2019.csv",
+        index=False,
+    )
+
+    return changes_df
 
 def main():
     df = prepare_data()
@@ -155,9 +242,11 @@ def main():
     regression_analysis(df)
     recent_analysis(df)
     country_comparison(df)
+    calculate_country_changes(df)
 
     create_scatter_plot(df)
     create_recent_country_plot(df)
+    create_trend_plot(df)
 
     print("\nFigures saved successfully.")
 
